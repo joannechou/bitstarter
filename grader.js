@@ -38,16 +38,29 @@ var assertFileExists = function(infile) {
     return instr;
 };
 
-var getFileFromURL = function(url) {
+var fetchURL = function(url) {
   url = url.toString();
   rest.get(url).on('complete', function(data) {
     if (data instanceof Error) {
       console.log("Error reading URL");
       return;
+    } else {
+      fs.writeFileSync(TMPFILE, data);
+      mainFunction();
     }
-    fs.writeFileSync(TMPFILE, data);
-    return TMPFILE;
   });
+};
+
+var mainFunction = function() {
+    var file;
+    if (program.url) {
+      file = TMPFILE;
+    } else {
+      file = program.file;
+    }
+    var checkJson = checkHtmlFile(file, program.checks);
+    var outJson = JSON.stringify(checkJson, null, 4);
+    console.log(outJson);
 };
 
 var cheerioHtmlFile = function(htmlfile) {
@@ -79,18 +92,12 @@ if(require.main == module) {
     program
         .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
-        .option('-u, --url <url>', 'URL of file', clone(getFileFromURL))
+        .option('-u, --url <url>', 'URL of file', clone(fetchURL))
         .parse(process.argv);
 
-    var file;
-    if (program.url) {
-      file = TMPFILE;
-    } else {
-      file = program.file;
+    if (!program.url) {
+      mainFunction();
     }
-    var checkJson = checkHtmlFile(file, program.checks);
-    var outJson = JSON.stringify(checkJson, null, 4);
-    console.log(outJson);
 } else {
     exports.checkHtmlFile = checkHtmlFile;
 }
